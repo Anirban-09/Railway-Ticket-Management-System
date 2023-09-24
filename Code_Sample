@@ -1,0 +1,268 @@
+# -*- coding: utf-8 -*-
+"""
+Railway Ticket Management System
+
+"""
+
+#Importing Libraries
+import mysql.connector as sql
+from random import randint
+
+#Building coonection to MySQL server.
+print ("Enter the details of MySQL server...")
+a= input('HostName: ')
+b= input('User: ')
+c= input('Password: ')
+
+connection= sql.connect(host=a, user=b, password=c)
+connection.autocommit= True
+current= connection.cursor()
+
+#Now Creating Database and Tables
+current.execute("Create Database IRCTC;")
+current.execute("Use IRCTC;")
+
+t1= "Create Table accounts"\
+    "(id   int primary key," \
+    "pass  varchar(18)" \
+    "name  varchar(100)," \
+    "sex   char(1)," \
+    "age   varchar(3)," \
+    "dob   date," \
+    "ph_no char(10));"
+current.execute(t1)
+
+t2= "Create Table tickets" \
+    "(id    int," \
+    "PNR    int," \
+    "train  varchar(25)," \
+    "doj    date," \
+    "tfr    varchar(100)," \
+    "tto    varchar(100));"
+current.execute(t2)
+
+#Login Portal
+def login_menu():
+    print("Welcome to the IRCTC Portal")
+    print("1. Create New Account \n"
+          "2. Log In \n"
+          "3. Exit")
+    option= int(input("Enter the choices: "))
+    if option == 1:
+        create_acc()
+    elif option == 2:
+        login()
+    else:
+        exit=input("Exit the portal? (Y/N) ")
+        if exit in "Nn":
+            login_menu()
+            
+# Account Creation for users
+def create_acc():
+    print("Enter the details to create your account:")
+    i = randint(1000, 10000)
+    print(f"Your generated ID is: {i}")
+    p = input("Enter your password: ")
+    n = input("Enter your name: ")
+    sex = input("Enter your gender (M/F/O): ")
+    age = input("Enter your age: ")
+    dob = input("Enter your date of birth (YYYY-MM-DD): ")
+    ph = input("Enter your contact number: ")
+    s1 = "INSERT INTO accounts VALUES" \
+         f"({i}, '{p}', '{n}', '{sex.upper()}', " \
+         f"{age}, '{dob}', '{ph}');"
+    current.execute(s1)
+    print("Now you may log in with your newly created account!")
+    login()
+    
+# Log in to Account
+def login():
+    global x
+    try:
+        x = int(input("Enter your ID: "))
+        y = input("Enter your password: ")
+        s2 = f"SELECT name FROM accounts " \
+             f"WHERE id = {x} AND pass = '{y}';"
+        current.execute(s2)
+        j = current.fetchone()
+        print(f"Welcome back {j[0]}!")
+        main_menu()
+    except:
+        print("Your account was not found!")
+        print("You can: \n"
+              "1. Try logging in again \n"
+              "2. Create a new account")
+        ch = input("Enter your choice: ")
+        if ch == "1":
+            login()
+        elif ch == "2":
+            create_acc()
+        else:
+            print("Invalid choice!")
+            x1 = input("Exit the portal? (Y/N) ")
+            if x1 in "Nn":
+                login_menu()
+                
+# Main Menu
+def main_menu():
+    print("What would you like to do today? \n"
+          "1. Purchase a Ticket \n"
+          "2. Check Ticket Status \n"
+          "3. Request for refund\n"
+          "4. Account Settings \n"
+          "5. Logout \n"
+          "6. Exit")
+    ch1 = int(input("Enter your choice: "))
+    if ch1 == 1:
+        buy_ticket()
+    elif ch1 == 2:
+        show_ticket()
+    elif ch1 == 3:
+        cancel_ticket()
+    elif ch1 == 4:
+        account()
+    elif ch1 == 5:
+        login_menu()
+    else:
+        exit_prompt()
+        
+# Exit Prompt
+def exit_prompt():
+    x2 = input("Would you like to exit? (Y/N) ")
+    if x2.upper() == "N":
+        main_menu()
+        
+# Back to Main Menu
+def back_to_main_menu():
+    x3 = input("Return to the Main Menu? (Y/N) ")
+    if x3.upper() == "Y":
+        print("Returning to Main Menu...")
+        main_menu()
+        
+# Ticket Creation
+def buy_ticket():
+    print("Enter details for your journey: ")
+    i = x
+    pnr = randint(100000, 1000000)
+    print(f"Your PNR is {pnr}")
+    train = input("Enter the name of the train: ")
+    doj = input("Enter the date of your journey (YYYY-MM-DD): ")
+    fr = input("Enter the Departing Station: ")
+    to = input("Enter the Destination Station: ")
+    s4 = f"INSERT INTO tickets VALUES" \
+         f"({i}, {pnr}, '{train}', " \
+         f"'{doj}', '{fr}', '{to}');"
+    current.execute(s4)
+    back_to_main_menu()
+
+# Ticket Checking
+def show_ticket():
+    try:
+        pnr = int(input("Enter your PNR: "))
+        s5 = f"SELECT * FROM tickets " \
+             f"WHERE pnr = {pnr}"
+        current.execute(s5)
+        j = current.fetchone()
+        if j[0] == x:
+            print(f"Train: {j[2]} \n"
+                  f"Date of Journey: {j[3]} \n"
+                  f"From: {j[4]} \n"
+                  f"To: {j[5]}")
+            back_to_main_menu()
+        else:
+            print("Unauthorized! \n"
+                  "Your ID does not match the PNR of ticket.")
+            back_to_main_menu()
+    except:
+        ticket_not_found()
+        
+# Ask for a refund
+def cancel_ticket():
+    try:
+        pnr = int(input("Enter the PNR number of the ticket: "))
+        s6 = f"SELECT id, pnr, train " \
+             f"FROM tickets " \
+             f"WHERE pnr = {pnr}"
+        current.execute(s6)
+        j = current.fetchone()
+        if j[0] == x:
+            print(f"PNR: {j[1]} \n"
+                  f"Train: {j[2]}")
+            x4 = input("Do you really want to cancel this ticket? (Y/N) ")
+            if x4.upper() == "Y":
+                s7 = f"DELETE FROM tickets " \
+                     f"WHERE pnr = {pnr};"
+                current.execute(s7)
+                print("You will be refunded shortly!")
+                back_to_main_menu()
+            else:
+                back_to_main_menu()
+        else:
+            print("Unauthorized! \n"
+                  "Your ID does not match "
+                  "the PNR of ticket.")
+            back_to_main_menu()
+    except:
+        ticket_not_found()
+        
+# If ticket is not found
+def ticket_not_found():
+    print("Ticket not found!")
+    print("You can: \n"
+          "1. Try entering your PNR number again \n"
+          "2. Purchase a ticket \n"
+          "3. Return to Main Menu \n"
+          "4. Exit")
+    ch = int(input("Enter your choice: "))
+    if ch == 1:
+        show_ticket()
+    elif ch == 2:
+        buy_ticket()
+    elif ch == 3:
+        print("Returning to Main Menu...")
+        main_menu()
+    else:
+        exit_prompt()
+        
+# Account settings
+def account():
+    print("Do you want to: \n"
+          "1. Show Account details \n"
+          "2. Delete Account")
+    ch = int(input("Enter your choice: "))
+    if ch == 1:
+        s8 = f"SELECT * FROM accounts WHERE id = {x}"
+        current.execute(s8)
+        j = current.fetchone()
+        print(f"ID: {j[0]} \n"
+              f"Name: {j[2]} \n"
+              f"Gender: {j[3]} \n"
+              f"Age: {j[4]} \n"
+              f"DOB: {j[5]} \n"
+              f"Phone Number: {j[6]}")
+        back_to_main_menu()
+    elif ch == 2:
+        x5 = input("Do you want to request for refund(s) for your ticket(s) too? (Y/N) ")
+        if x5.upper() == "Y":
+            s9 = f"DELETE FROM tickets WHERE id = {x}"
+            current.execute(s9)
+            print("You will be refunded shortly!")
+        s10= f"DELETE FROM ACCOUNTS " \
+             f"WHERE id = {x}"
+        current.execute(s10)
+        print("Account Successfully Deleted!")
+        login_menu()
+    else:
+        back_to_main_menu()
+        
+        
+# Calling the first function, hence starting the program
+if __name__ == "__main__":
+  login_menu()
+
+
+
+
+
+
+
